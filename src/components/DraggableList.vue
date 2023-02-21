@@ -17,10 +17,11 @@ const props = defineProps<Props>();
 const state = ref({
   items: props.items,
   isDragging: false,
-  offsetY: 0,
+  cursorPositionY: 0,
 });
 
-const itemPadding = '16px';
+const itemPaddingBottomPx = 16;
+const itemPaddingBottom = `${itemPaddingBottomPx}px`;
 const itemWidth = computed(() => `${props.itemWidthPx}px`);
 const itemHeight = computed(() => `${props.itemHeightPx}px`);
 
@@ -38,14 +39,17 @@ function onDragOver(event: DragEvent, index: number) {
   event.preventDefault(); // Allows onDrop to trigger consistently
 
   if (event.target instanceof HTMLElement) {
-    let offsetValue = event.target.offsetTop;
+    const positionY = event.target.offsetTop; // Position of the top left corner of the hovered target item.
+    const paddingCenter = itemPaddingBottomPx / 2;
 
-    if (event.offsetY > props.itemHeightPx / 2) {
-      // When dragging over bottom half of item, show drag cursor below the target item instead of above
-      offsetValue += props.itemHeightPx + parseInt(itemPadding, 10); // CSS strings can be parsed (e.g. 200px -> 200, just JS things)
+    if (event.offsetY < props.itemHeightPx / 2) {
+      // When dragging over top half of item, show drag cursor above the target item. The cursor should appear in the
+      // center of the padding that separates two items.
+      state.value.cursorPositionY = positionY - paddingCenter;
+    } else {
+      // When dragging over bottom half of item, show drag cursor below the target item by adjusting for the item's height.
+      state.value.cursorPositionY = positionY + props.itemHeightPx + paddingCenter;
     }
-
-    state.value.offsetY = offsetValue;
   }
 }
 
@@ -83,7 +87,7 @@ function onDrop(event: DragEvent, targetIndex: number) {
 
 <template>
   <ol class="drag-list">
-    <DragCursor :is-visible="state.isDragging" :offset-y="state.offsetY" :width-px="props.itemWidthPx" />
+    <DragCursor :is-visible="state.isDragging" :position-y="state.cursorPositionY" :width-px="props.itemWidthPx" />
     <li
       class="drop-zone"
       v-for="(item, index) in state.items"
@@ -108,15 +112,24 @@ function onDrop(event: DragEvent, targetIndex: number) {
 }
 
 .drop-zone:not(:last-child) {
-  padding-bottom: v-bind(itemPadding);
+  padding-bottom: v-bind(itemPaddingBottom);
 }
 
 .drag-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: v-bind('itemWidth');
   height: v-bind('itemHeight');
   padding: 16px;
   border-radius: 8px;
   user-select: none;
-  background-color: #283649;
+  background-color: #414141;
+}
+
+@media (prefers-color-scheme: light) {
+  .drag-item {
+    background-color: #d3d3d3;
+  }
 }
 </style>

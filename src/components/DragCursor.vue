@@ -3,17 +3,25 @@ import { computed } from 'vue';
 
 type Props = {
   isVisible: boolean;
-  offsetY: number;
+  positionY: number;
   widthPx: number;
 };
 
 const props = withDefaults(defineProps<Props>(), {
   isVisible: false,
-  offsetY: 0,
+  positionY: 0,
 });
+
+const heightPx = 2;
+const height = `${heightPx}px`;
 const overhangPx = 16;
+const leftPosition = `${overhangPx / 2}px`;
+
+// Cursor should slightly extend beyond the provided width
 const width = computed(() => `${props.widthPx + overhangPx}px`);
-const offsetY = computed(() => `${props.offsetY - 9}px`);
+
+// Props position does not take into account height of the cursor bar
+const positionY = computed(() => `${props.positionY - heightPx / 2}px`);
 </script>
 
 <template>
@@ -23,14 +31,14 @@ const offsetY = computed(() => `${props.offsetY - 9}px`);
 <style scoped>
 .divider {
   position: absolute;
-  left: 8px;
-  top: v-bind('offsetY');
+  left: v-bind(leftPosition);
+  top: v-bind('positionY');
   width: v-bind('width');
   pointer-events: none;
   user-select: none;
   border-style: none;
-  border-top: 3px solid skyblue;
-  height: 3px;
+  border-top: v-bind(height) solid #1face3;
+  height: v-bind(height);
   margin: 0;
 }
 </style>
