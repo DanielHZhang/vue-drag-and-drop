@@ -1,6 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import DragCursor from './DragCursor.vue';
+
+type Item = {
+  id: string;
+  title: string;
+};
+
+type HistoryItem = {
+  prevIndex: number;
+  currentIndex: number;
+  data: Item;
+};
 
 type Props = {
   items: Item[];
@@ -8,17 +19,25 @@ type Props = {
   itemHeightPx: number;
 };
 
-type Item = {
-  id: string;
-  title: string;
+type State = {
+  items: Item[];
+  cursorPositionY: number;
+  isDragging: boolean;
+  isScrolling: boolean;
+  undoStack: HistoryItem[];
+  redoStack: HistoryItem[];
+  selectedIndex: number;
 };
 
 const props = defineProps<Props>();
-const state = ref({
+const state = ref<State>({
   items: props.items,
   cursorPositionY: 0,
   isDragging: false,
   isScrolling: false,
+  selectedIndex: 0,
+  undoStack: [],
+  redoStack: [],
 });
 const dragSectionElement = ref<HTMLDivElement | null>(null);
 
@@ -63,27 +82,27 @@ function onDrop(event: DragEvent, targetIndex: number) {
   if (!event.dataTransfer) {
     return;
   }
-  if (event.target instanceof HTMLElement && event.offsetY > props.itemHeightPx / 2) {
+
+  const originalIndex = parseInt(event.dataTransfer.getData('index'), 10);
+  if (
+    isNaN(originalIndex) ||
+    originalIndex < 0 ||
+    originalIndex > state.value.items.length ||
+    originalIndex === targetIndex
+  ) {
+    return; // Do not handle drop events when there is no change in indices
+  }
+  if (targetIndex < originalIndex && event.target instanceof HTMLElement && event.offsetY > props.itemHeightPx / 2) {
     // When dragging over bottom half of target item, place the source item after the target
     targetIndex += 1;
   }
 
-  let sourceIndex = parseInt(event.dataTransfer.getData('index'), 10);
-  if (isNaN(sourceIndex) || sourceIndex > state.value.items.length || sourceIndex < 0 || sourceIndex === targetIndex) {
-    return; // Do not handle drop events when there is no change in indices
-  }
-
-  const sourceItem = state.value.items[sourceIndex];
-  state.value.items.splice(targetIndex, 0, sourceItem); // Insert source item at target index
-
-  if (targetIndex < sourceIndex) {
-    sourceIndex += 1; // Moved item from larger index to smaller index all indices >targetIndex to shift by 1
-  }
-
-  const deleted = state.value.items.splice(sourceIndex, 1);
-  if (deleted.length === 0) {
-    console.error('Failed to delete drag source item');
-  }
+  // Delete item from original index
+  const deleted = state.value.items.splice(originalIndex, 1);
+  state.value.items.splice(targetIndex, 0, deleted[0]); // Insert source item at target index
+  state.value.selectedIndex = targetIndex;
+  state.value.undoStack.push({ prevIndex: originalIndex, currentIndex: targetIndex, data: deleted[0] });
+  state.value.redoStack.length = 0; // Clear the redo stack
 }
 
 function onDragOverSection(event: DragEvent) {
@@ -112,6 +131,45 @@ function onDragOverSection(event: DragEvent) {
     debouncedScroll(-scrollAmountPx);
   }
 }
+
+function undo() {
+  const undoItem = state.value.undoStack.pop();
+  if (!undoItem) {
+    return;
+  }
+
+  console.log(undoItem);
+  if (undoItem.currentIndex > undoItem.prevIndex) {
+    state.value.items.splice(undoItem.currentIndex, 1);
+    state.value.items.splice(undoItem.prevIndex, 0, undoItem.data);
+  } else {
+    state.value.items.splice(undoItem.prevIndex, 0, undoItem.data);
+    state.value.items.splice(undoItem.currentIndex, 1);
+  }
+}
+
+function documentKeyDown(event: KeyboardEvent) {
+  if (event.key === 'z' && (event.metaKey || event.ctrlKey)) {
+    if (event.shiftKey) {
+      // Handle redo
+      const previous = state.value.redoStack.pop();
+    } else {
+      undo();
+    }
+  }
+}
+
+function onMouseDown(index: number) {
+  state.value.selectedIndex = index;
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', documentKeyDown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', documentKeyDown);
+});
 </script>
 
 <template>
@@ -125,8 +183,9 @@ function onDragOverSection(event: DragEvent) {
         @dragover="onDragOver($event, index)"
         @dragend="onDragEnd"
         @drop="onDrop($event, index)"
+        @mousedown="onMouseDown(index)"
       >
-        <div class="drag-item" draggable="true">
+        <div class="drag-item" :class="{ selected: state.selectedIndex === index }" draggable="true">
           {{ item.title }}
         </div>
       </li>
@@ -149,6 +208,11 @@ function onDragOverSection(event: DragEvent) {
 
 .drop-zone:not(:last-child) {
   padding-bottom: v-bind(itemPaddingBottom);
+}
+
+.selected {
+  border-style: inset;
+  border: 2px solid #1face3;
 }
 
 .drag-item {
