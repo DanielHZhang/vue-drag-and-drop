@@ -7,7 +7,7 @@ import { tempSlidesData } from '../api';
   <div class="wrapper">
     <h1>Slides</h1>
     <section class="slides">
-      <DraggableList :items="tempSlidesData" :item-width="'200px'" :item-height="'130px'" />
+      <DraggableList :items="tempSlidesData" :item-width-px="200" :item-height-px="130" />
     </section>
   </div>
 </template>

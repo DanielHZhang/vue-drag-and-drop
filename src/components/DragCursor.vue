@@ -4,46 +4,33 @@ import { computed } from 'vue';
 type Props = {
   isVisible: boolean;
   offsetY: number;
-  width: string;
+  widthPx: number;
 };
 
 const props = withDefaults(defineProps<Props>(), {
   isVisible: false,
   offsetY: 0,
 });
-const offsetY = computed(() => `${props.offsetY - 16}px`);
+const overhangPx = 16;
+const width = computed(() => `${props.widthPx + overhangPx}px`);
+const offsetY = computed(() => `${props.offsetY - 9}px`);
 </script>
 
 <template>
-  <div class="drag-cursor">
-    <!-- <div class="drag-cursor" v-if="props.isVisible"> -->
-    <div class="mark" />
-    <hr class="divider" />
-  </div>
+  <hr class="divider" v-if="props.isVisible" />
 </template>
 
 <style scoped>
-.drag-cursor {
-  display: flex;
-  align-items: center;
+.divider {
   position: absolute;
+  left: 8px;
   top: v-bind('offsetY');
+  width: v-bind('width');
   pointer-events: none;
   user-select: none;
-}
-
-.divider {
-  flex-grow: 1;
-  width: calc(v-bind('props.width') - 10px);
   border-style: none;
-  border-top: 1px solid white;
-}
-
-.mark {
-  width: 10px;
-  height: 10px;
-  /* background-color: lightblue; */
-  border: 1px solid white;
-  border-radius: 50%;
+  border-top: 3px solid skyblue;
+  height: 3px;
+  margin: 0;
 }
 </style>
