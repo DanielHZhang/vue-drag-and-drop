@@ -16,9 +16,11 @@ type Item = {
 const props = defineProps<Props>();
 const state = ref({
   items: props.items,
-  isDragging: false,
   cursorPositionY: 0,
+  isDragging: false,
+  isScrolling: false,
 });
+const dragSectionElement = ref<HTMLDivElement | null>(null);
 
 const itemPaddingBottomPx = 16;
 const itemPaddingBottom = `${itemPaddingBottomPx}px`;
@@ -67,7 +69,7 @@ function onDrop(event: DragEvent, targetIndex: number) {
   }
 
   let sourceIndex = parseInt(event.dataTransfer.getData('index'), 10);
-  if (isNaN(sourceIndex) || sourceIndex === targetIndex) {
+  if (isNaN(sourceIndex) || sourceIndex > state.value.items.length || sourceIndex < 0 || sourceIndex === targetIndex) {
     return; // Do not handle drop events when there is no change in indices
   }
 
@@ -83,27 +85,61 @@ function onDrop(event: DragEvent, targetIndex: number) {
     console.error('Failed to delete drag source item');
   }
 }
+
+function onDragOverSection(event: DragEvent) {
+  if (!dragSectionElement.value || state.value.isScrolling) {
+    return;
+  }
+
+  const scrollBufferZonePx = 50;
+  const scrollAmountPx = 100;
+  const { top, bottom } = dragSectionElement.value.getBoundingClientRect();
+
+  // Debounce the scroll because the "smooth" behaviour uses an easing curve that takes some milliseconds to complete
+  const debouncedScroll = (amount: number) => {
+    dragSectionElement.value!.scrollBy({ top: amount, behavior: 'smooth' });
+    state.value.isScrolling = true;
+    setTimeout(() => {
+      state.value.isScrolling = false;
+    }, 80);
+  };
+
+  if (event.clientY > bottom - scrollBufferZonePx) {
+    // Within bottom scroll buffer zone -> scroll down
+    debouncedScroll(scrollAmountPx);
+  } else if (event.clientY < top + scrollBufferZonePx) {
+    // Within top scroll buffer zone -> scroll up
+    debouncedScroll(-scrollAmountPx);
+  }
+}
 </script>
 
 <template>
-  <ol class="drag-list">
-    <DragCursor :is-visible="state.isDragging" :position-y="state.cursorPositionY" :width-px="props.itemWidthPx" />
-    <li
-      class="drop-zone"
-      v-for="(item, index) in state.items"
-      @dragstart="onDragStart($event, index)"
-      @dragover="onDragOver($event, index)"
-      @dragend="onDragEnd"
-      @drop="onDrop($event, index)"
-    >
-      <div class="drag-item" draggable="true">
-        {{ item.title }}
-      </div>
-    </li>
-  </ol>
+  <section class="drag-section" @dragover="onDragOverSection" ref="dragSectionElement">
+    <ol class="drag-list">
+      <DragCursor :is-visible="state.isDragging" :position-y="state.cursorPositionY" :width-px="props.itemWidthPx" />
+      <li
+        class="drop-zone"
+        v-for="(item, index) in state.items"
+        @dragstart="onDragStart($event, index)"
+        @dragover="onDragOver($event, index)"
+        @dragend="onDragEnd"
+        @drop="onDrop($event, index)"
+      >
+        <div class="drag-item" draggable="true">
+          {{ item.title }}
+        </div>
+      </li>
+    </ol>
+  </section>
 </template>
 
 <style scoped>
+.drag-section {
+  height: 80vh;
+  overflow-y: auto;
+}
+
 .drag-list {
   list-style-type: none;
   padding: 16px;
