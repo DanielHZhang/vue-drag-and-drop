@@ -4,8 +4,16 @@ import { tempSlidesData } from '../api';
 </script>
 
 <template>
-  <div>Test</div>
-  <DraggableList :items="tempSlidesData" />
+  <h1>Slides</h1>
+  <section class="slides">
+    <DraggableList :items="tempSlidesData" :item-width="'200px'" :item-height="'130px'" />
+  </section>
 </template>
 
-<style scoped></style>
+<style scoped>
+.slides {
+  height: 80vh;
+  overflow-y: auto;
+  border: 1px solid rgba(126, 126, 126, 0.705);
+}
+</style>
