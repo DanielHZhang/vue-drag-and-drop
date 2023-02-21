@@ -56,7 +56,7 @@ function onDrop(event: DragEvent, targetIndex: number) {
   const sourceItem = items.value[sourceIndex];
   items.value.splice(targetIndex, 0, sourceItem); // Insert source item at target index
 
-  console.log(sourceIndex, targetIndex);
+  // TODO: targetIndex + 1 depending on offset of dragover
   if (targetIndex < sourceIndex) {
     sourceIndex += 1; // Moved item from larger index to smaller index all indices >targetIndex to shift by 1
   }
@@ -65,7 +65,6 @@ function onDrop(event: DragEvent, targetIndex: number) {
   if (deleted.length === 0) {
     console.error('Failed to delete drag source item');
   }
-  console.log(items.value);
 }
 </script>
 
@@ -80,7 +79,9 @@ function onDrop(event: DragEvent, targetIndex: number) {
       @dragend="onDragEnd"
       @drop="onDrop($event, index + 1)"
     >
-      <div class="drag-item" draggable="true">{{ item.title }}</div>
+      <div class="drag-item" draggable="true">
+        {{ item.title }}
+      </div>
     </li>
   </ol>
 </template>
@@ -93,22 +94,18 @@ function onDrop(event: DragEvent, targetIndex: number) {
   position: relative;
 }
 
-.drop-zone {
-  padding: 12px 0;
+.drop-zone:not(:last-child) {
+  padding-bottom: 16px;
 }
 
 .drag-item {
   width: v-bind('props.itemWidth');
   height: v-bind('props.itemHeight');
-  /* padding: 16px; */
+  padding: 16px;
   border-radius: 8px;
   /* border: 2px solid black; */
   user-select: none;
   cursor: grab;
   background-color: #283649;
-}
-
-.drag-item:not(:last-child) {
-  margin-bottom: 16px;
 }
 </style>
