@@ -14,30 +14,42 @@ type Item = {
 };
 
 const props = defineProps<Props>();
-const items = ref(props.items);
-const isDragging = ref(false);
-const offsetY = ref(0);
+const state = ref({
+  items: props.items,
+  isDragging: false,
+  offsetY: 0,
+});
+
+const itemPadding = '16px';
 
 function onDragStart(event: DragEvent, sourceIndex: number) {
-  isDragging.value = true;
+  state.value.isDragging = true;
 
   if (event.dataTransfer) {
-    event.dataTransfer.setData('id', sourceIndex.toString());
+    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('index', sourceIndex.toString());
   }
 }
 
 function onDragOver(event: DragEvent, index: number) {
-  event.preventDefault();
+  event.preventDefault(); // Allows onDrop to trigger consistently
 
   if (event.target instanceof HTMLElement) {
-    console.log('index', index, event.target.offsetTop);
-    offsetY.value = event.target.offsetTop;
-    //
+    const itemHeight = parseInt(props.itemHeight, 10); // CSS strings can be parsed (e.g. 200px -> 200, just JS things)
+    let offsetValue = event.target.offsetTop;
+
+    if (event.offsetY > itemHeight / 2) {
+      // When dragging over bottom half of item, show drag cursor below the target item instead of above
+      offsetValue += itemHeight + parseInt(itemPadding, 10);
+    }
+
+    state.value.offsetY = offsetValue;
   }
 }
 
 function onDragEnd(event: DragEvent) {
-  isDragging.value = false;
+  state.value.isDragging = false;
 }
 
 function onDrop(event: DragEvent, targetIndex: number) {
@@ -47,21 +59,21 @@ function onDrop(event: DragEvent, targetIndex: number) {
     return;
   }
 
-  let sourceIndex = parseInt(event.dataTransfer.getData('id'), 10);
+  let sourceIndex = parseInt(event.dataTransfer.getData('index'), 10);
 
   if (isNaN(sourceIndex) || sourceIndex === targetIndex) {
     return; // Do not handle drop events when there is no change in indices
   }
 
-  const sourceItem = items.value[sourceIndex];
-  items.value.splice(targetIndex, 0, sourceItem); // Insert source item at target index
+  const sourceItem = state.value.items[sourceIndex];
+  state.value.items.splice(targetIndex, 0, sourceItem); // Insert source item at target index
 
   // TODO: targetIndex + 1 depending on offset of dragover
   if (targetIndex < sourceIndex) {
     sourceIndex += 1; // Moved item from larger index to smaller index all indices >targetIndex to shift by 1
   }
 
-  const deleted = items.value.splice(sourceIndex, 1);
+  const deleted = state.value.items.splice(sourceIndex, 1);
   if (deleted.length === 0) {
     console.error('Failed to delete drag source item');
   }
@@ -70,10 +82,10 @@ function onDrop(event: DragEvent, targetIndex: number) {
 
 <template>
   <ol class="drag-list">
-    <DragCursor :isVisible="isDragging" :offsetY="offsetY" />
+    <DragCursor :isVisible="state.isDragging" :offsetY="state.offsetY" :width="props.itemWidth" />
     <li
       class="drop-zone"
-      v-for="(item, index) in items"
+      v-for="(item, index) in state.items"
       @dragstart="onDragStart($event, index)"
       @dragover="onDragOver($event, index)"
       @dragend="onDragEnd"
@@ -95,7 +107,7 @@ function onDrop(event: DragEvent, targetIndex: number) {
 }
 
 .drop-zone:not(:last-child) {
-  padding-bottom: 16px;
+  padding-bottom: v-bind(itemPadding);
 }
 
 .drag-item {
@@ -103,9 +115,8 @@ function onDrop(event: DragEvent, targetIndex: number) {
   height: v-bind('props.itemHeight');
   padding: 16px;
   border-radius: 8px;
-  /* border: 2px solid black; */
   user-select: none;
-  cursor: grab;
+  /* cursor: grab; */
   background-color: #283649;
 }
 </style>

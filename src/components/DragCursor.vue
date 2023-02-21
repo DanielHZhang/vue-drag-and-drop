@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 type Props = {
   isVisible: boolean;
   offsetY: number;
+  width: string;
 };
 
 const props = withDefaults(defineProps<Props>(), {
   isVisible: false,
   offsetY: 0,
 });
-const offsetY = computed(() => `${props.offsetY}px`);
+const offsetY = computed(() => `${props.offsetY - 16}px`);
 </script>
 
 <template>
@@ -27,15 +28,15 @@ const offsetY = computed(() => `${props.offsetY}px`);
   align-items: center;
   position: absolute;
   top: v-bind('offsetY');
+  pointer-events: none;
+  user-select: none;
 }
 
 .divider {
-  /* border: 1px solid white; */
   flex-grow: 1;
-  width: 100px;
+  width: calc(v-bind('props.width') - 10px);
   border-style: none;
   border-top: 1px solid white;
-  /* width: 100%; */
 }
 
 .mark {
