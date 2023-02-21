@@ -138,21 +138,28 @@ function undo() {
     return;
   }
 
-  console.log(undoItem);
-  if (undoItem.currentIndex > undoItem.prevIndex) {
-    state.value.items.splice(undoItem.currentIndex, 1);
-    state.value.items.splice(undoItem.prevIndex, 0, undoItem.data);
-  } else {
-    state.value.items.splice(undoItem.prevIndex, 0, undoItem.data);
-    state.value.items.splice(undoItem.currentIndex, 1);
+  state.value.items.splice(undoItem.currentIndex, 1); // Delete from current index
+  state.value.items.splice(undoItem.prevIndex, 0, undoItem.data); // Insert into previous index
+  state.value.selectedIndex = undoItem.prevIndex;
+  state.value.redoStack.push(undoItem);
+}
+
+function redo() {
+  const redoItem = state.value.redoStack.pop();
+  if (!redoItem) {
+    return;
   }
+
+  state.value.items.splice(redoItem.prevIndex, 1); // Delete item that is now at prevIndex due to undo
+  state.value.items.splice(redoItem.currentIndex, 0, redoItem.data);
+  state.value.selectedIndex = redoItem.currentIndex;
+  state.value.undoStack.push(redoItem);
 }
 
 function documentKeyDown(event: KeyboardEvent) {
   if (event.key === 'z' && (event.metaKey || event.ctrlKey)) {
     if (event.shiftKey) {
-      // Handle redo
-      const previous = state.value.redoStack.pop();
+      redo();
     } else {
       undo();
     }
