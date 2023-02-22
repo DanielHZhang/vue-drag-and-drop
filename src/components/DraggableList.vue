@@ -80,7 +80,7 @@ function onDragEnd(event: DragEvent) {
 }
 
 function onDrop(event: DragEvent, targetIndex: number) {
-  if (!event.dataTransfer) {
+  if (!event.dataTransfer || !(event.target instanceof HTMLElement)) {
     return;
   }
 
@@ -93,9 +93,12 @@ function onDrop(event: DragEvent, targetIndex: number) {
   ) {
     return; // Do not handle drop events when there is no change in indices
   }
-  if (targetIndex < originalIndex && event.target instanceof HTMLElement && event.offsetY > props.itemHeightPx / 2) {
-    // When dragging over bottom half of target item, place the source item after the target
-    targetIndex += 1;
+
+  const itemHalfHeight = props.itemHeightPx / 2;
+  if (targetIndex < originalIndex && event.offsetY > itemHalfHeight) {
+    targetIndex += 1; // When dragging over bottom half of target item, place the source item after the target
+  } else if (targetIndex > originalIndex && event.offsetY < itemHalfHeight) {
+    targetIndex -= 1; // When dragging over top half of target item, place the source item before the target
   }
 
   // Delete item from original index
