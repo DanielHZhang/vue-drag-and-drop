@@ -40,6 +40,7 @@ const state = ref<State>({
   redoStack: [],
 });
 const dragSectionElement = ref<HTMLDivElement | null>(null);
+const dragListElement = ref<HTMLOListElement | null>(null);
 
 const itemPaddingBottomPx = 16;
 const itemPaddingBottom = `${itemPaddingBottomPx}px`;
@@ -142,6 +143,10 @@ function undo() {
   state.value.items.splice(undoItem.prevIndex, 0, undoItem.data); // Insert into previous index
   state.value.selectedIndex = undoItem.prevIndex;
   state.value.redoStack.push(undoItem);
+
+  if (dragListElement.value) {
+    dragListElement.value.children.item(state.value.selectedIndex)?.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function redo() {
@@ -154,6 +159,10 @@ function redo() {
   state.value.items.splice(redoItem.currentIndex, 0, redoItem.data);
   state.value.selectedIndex = redoItem.currentIndex;
   state.value.undoStack.push(redoItem);
+
+  if (dragListElement.value) {
+    dragListElement.value.children.item(state.value.selectedIndex)?.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function documentKeyDown(event: KeyboardEvent) {
@@ -181,7 +190,7 @@ onUnmounted(() => {
 
 <template>
   <section class="drag-section" @dragover="onDragOverSection" ref="dragSectionElement">
-    <ol class="drag-list">
+    <ol class="drag-list" ref="dragListElement">
       <DragCursor :is-visible="state.isDragging" :position-y="state.cursorPositionY" :width-px="props.itemWidthPx" />
       <li
         class="drop-zone"
